@@ -1,6 +1,6 @@
 # awselb
 
-実行元のEC2インスタンスを、同VPC内にある `Classic Load Balancer(ELB)` に着脱させるコマンドです。
+実行元のEC2インスタンスを、同VPC内にある `Classic Load Balancer(ELB)` に着脱させるコマンドです。
 
 ## 要件
 
@@ -22,7 +22,7 @@
  $ chmod +x awselb
 ```
 
-必要なコマンドをインストールしてください。
+必要なコマンドをインストールしてください。
 
 ```bash
  $ yum install -y jq
@@ -78,7 +78,7 @@ AWS ConsoleからIAMロールの作成をして、EC2インスタンスに紐付
 
 *サブコマンド*
 
-- status　　EC2インスタンスが紐付いているELBが確認します。
+- status　　EC2インスタンスが紐付いているELBが確認します。
 - attach　　EC2インスタンスをELBに取り付けます。同じVPCに複数ELBが存在する場合は対話モードになります。
 - detach　　ELBからEC2インスタンスを取り外します。
 
