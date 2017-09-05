@@ -18,7 +18,7 @@
 設置先はpathが通っている、 `/usr/local/bin` か `$HOME/bin` が推奨です。
 
 ```bash
- $ wget -s https://raw.githubusercontent.com/logicraft/awselb/master/awselb
+ $ wget https://raw.githubusercontent.com/logicraft/awselb/master/awselb
  $ chmod +x awselb
 ```
 
