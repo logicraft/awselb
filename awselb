@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# 設定
+export LC_ALL=en_US.UTF-8
+ELB=""
+ELB_NAME=""
+INSTANCE_ID=""
+
+
+# 引数解析
+usage_exit() {
+    echo "Usage: `basename $0` [status|attach|detach]" 1>&2
+    echo "Options:" 1>&2
+    echo " -x    Xtrace" 1>&2
+    echo " -h    Display this help and exit" 1>&2
+    exit 1
+}
+
+while getopts xh OPT; do
+    case $OPT in
+        x)  set -xv
+            ;;
+        h)  usage_exit
+            ;;
+        \?) usage_exit
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+
+# コマンドチェック
+if [ $# -ne 1 ]; then
+    echo -e "There is no command specified.\n" 1>&2
+    usage_exit
+fi
+
+case $1 in
+    "status" | "attach" | "detach") ;;
+    *) usage_exit ;;
+esac
+
+if [ ! `which jq` ]; then
+    echo "jq command not found." 1>&2
+    echo "Please install jq command." 1>&2
+    echo "   https://stedolan.github.io/jq/download/" 1>&2
+    exit 1;
+fi
+
+
+# 本処理
+checking() {
+    ELB=`echo $VPC_ELB | jq "select(.Instances[] == \"$INSTANCE_ID\")"`
+
+    if [ ! "$ELB" ]; then
+        echo "EC2 instance not attached to ELB."
+        exit 1;
+    fi
+
+    ELB_NAME=`echo $ELB | jq -r '.LoadBalancerName'`
+}
+
+status() {
+    checking
+
+    echo -e "EC2 instance is attached to the ELB.\n"
+    echo "Name: $ELB_NAME"
+    aws elb describe-instance-health --load-balancer-name $ELB_NAME | jq -r ".InstanceStates[] | select(.InstanceId == \"$INSTANCE_ID\") | {InstanceId, State} | to_entries | map(\"\(.key): \(.value)\")[]"
+}
+
+attach() {
+    if [ 1 -eq `echo $VPC_ELB | jq '.LoadBalancerName' | wc -l` ]; then
+        ELB_NAME=`echo $VPC_ELB | jq -r '.LoadBalancerName'`
+    else
+        ELB_LIST=(`echo $VPC_ELB | jq -r '.LoadBalancerName'`)
+
+        for I in "${!ELB_LIST[@]}"; do
+            echo "$(expr $I + 1)) ${ELB_LIST[$I]}";
+        done
+        echo -n "Which ELB do you attach to? : "
+        read KEY
+
+        KEY=`expr $KEY - 1`
+        if [ ! "${ELB_LIST[$KEY]}" ]; then
+            echo "ELB not found."
+            exit 0
+        fi
+        ELB_NAME="${ELB_LIST[$KEY]}"
+    fi
+
+    aws elb register-instances-with-load-balancer --load-balancer-name $ELB_NAME --instances $INSTANCE_ID >& /dev/null
+}
+
+detach() {
+    checking
+
+    aws elb deregister-instances-from-load-balancer --load-balancer-name $ELB_NAME --instances $INSTANCE_ID >& /dev/null
+}
+
+INSTANCE_ID=`curl -s http://169.254.169.254/latest/meta-data/instance-id`
+VPCID=`aws ec2 describe-instances --output text --instance-ids $INSTANCE_ID --query "Reservations[].Instances[].VpcId|[0]"`
+VPC_ELB=`aws elb describe-load-balancers | jq ".LoadBalancerDescriptions[] | select(.[\"VPCId\"] == \"$VPCID\") | {\"LoadBalancerName\": .LoadBalancerName, \"Instances\": [.Instances[][]]}"`
+
+if [ ! "$VPC_ELB" ]; then
+    echo "ELB not found in VPC."
+    exit 0;
+fi
+
+case $1 in
+    "status") status
+              ;;
+    "attach") attach
+              ;;
+    "detach") detach
+              ;;
+    *) usage_exit
+       ;;
+esac
+
+
+exit 0
