@@ -5,8 +5,8 @@
 ## 要件
 
 - AWS EC2インスタンス用シェルコマンドです。
-- ELBはClassicのみに対応しています。
-- 使用するには適切なIAMポリシーが必要となります。
+- ELBは `Classic` のみに対応しています。
+- 使用するには適切な `IAMポリシー` が必要となります。
 - 下記のコマンドに依存しているため、インストールが必要となります。
   - [aws cli](https://aws.amazon.com/jp/cli/)
   - [jq](https://stedolan.github.io/jq/)
@@ -47,6 +47,7 @@ AWS ConsoleからIAMロールの作成をして、EC2インスタンスに紐付
 
 ```json
 {
+    "Version": "2012-10-17",
     "Statement": [
         {
             "Effect": "Allow",
